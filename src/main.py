@@ -6,12 +6,7 @@ from src.visualize_graph import visualize_graph
 
 load_dotenv()
 
-
-visualize_graph(compiled_graph)
-# response = compiled_graph.invoke(initial_state, config=config)
-
-
-
 if __name__ == "__main__":
+    visualize_graph(compiled_graph)
+    # response = compiled_graph.invoke(initial_state, config=config)
     # print(response)
-    pass
