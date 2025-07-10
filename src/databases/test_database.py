@@ -9,7 +9,7 @@ from pathlib import Path
 # Add src directory to path
 sys.path.append(str(Path(__file__).parent / "src"))
 
-from database import CharacterDatabase
+from src.databases.database import CharacterDatabase
 
 
 def test_database_functionality():
