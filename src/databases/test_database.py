@@ -17,7 +17,7 @@ def test_database_functionality():
     print("=== Testing Character Database ===")
     
     # Initialize database
-    db = CharacterDatabase("test_characters.db")
+    db = CharacterDatabase("test_characters.sqlite")
     
     # Test 1: Insert a character
     print("\n1. Testing character insertion...")

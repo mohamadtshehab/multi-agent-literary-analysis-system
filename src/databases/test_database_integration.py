@@ -18,7 +18,7 @@ def test_database_integration():
     print("=== Testing Database Integration ===")
     
     # Initialize database
-    db = CharacterDatabase("test_integration.db")
+    db = CharacterDatabase("test_integration.sqlite")
     
     # Create a test state
     test_state = State({
@@ -81,7 +81,7 @@ def test_no_sql_storage():
     """Test the NoSQL-like storage capabilities."""
     print("\n=== Testing NoSQL-like Storage ===")
     
-    db = CharacterDatabase("test_nosql_storage.db")
+    db = CharacterDatabase("test_nosql_storage.sqlite")
     
     # Test storing complex nested data
     complex_profile = {
@@ -135,7 +135,7 @@ def test_no_sql_storage():
         print(f"  - Chapter 2 traits: {', '.join(chapter_2_traits)}")
     
     # Clear test database
-    db.clear_database()
+    # db.clear_database()
     print("\n=== NoSQL storage tests completed! ===")
 
 
