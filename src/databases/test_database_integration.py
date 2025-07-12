@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent / "src"))
 
 from src.databases.database import CharacterDatabase
-from src.states import State
+from src.schemas.states import State
 
 
 def test_database_integration():

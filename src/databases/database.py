@@ -25,53 +25,49 @@ class CharacterDatabase:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             
-            # Create the characters table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS characters (
-                    character_id TEXT PRIMARY KEY,    -- A unique ID we generate (e.g., a UUID)
+                    id TEXT PRIMARY KEY,    -- A unique ID we generate (e.g., a UUID)
                     name TEXT NOT NULL,               -- The character's common name (e.g., "Ali")
-                    disambiguation_hint TEXT,         -- A short, descriptive hint (e.g., "the merchant from Cairo")
-                    profile_json TEXT                 -- JSON document containing the character profile
+                    profile_json TEXT                 -- JSON document containing the character profile (including hint)
                 );
             """)
             
             # Create indexes for better performance
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_characters_name ON characters(name);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_characters_hint ON characters(disambiguation_hint);")
             
             conn.commit()
     
-    def insert_character(self, name: str, profile: Dict[str, Any], 
-                        disambiguation_hint: Optional[str] = None) -> str:
+    def insert_character(self, name: str, profile: Dict[str, Any], ) -> str:
         """
         Insert a new character profile into the database.
         
         Args:
             name: Character's name
             profile: Character profile as a dictionary
-            disambiguation_hint: Optional hint to distinguish between characters with same name
             
         Returns:
-            The generated character_id
+            The generated id
         """
-        character_id = str(uuid.uuid4())
+        id = str(uuid.uuid4())
+        
         
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO characters (character_id, name, disambiguation_hint, profile_json)
-                VALUES (?, ?, ?, ?)
-            """, (character_id, name, disambiguation_hint, json.dumps(profile)))
+                INSERT INTO characters (id, name, profile_json)
+                VALUES (?, ?, ?)
+            """, (id, name, json.dumps(profile, ensure_ascii=False)))
             conn.commit()
         
-        return character_id
+        return id
     
-    def update_character(self, character_id: str, profile: Dict[str, Any]) -> bool:
+    def update_character(self, id: str, profile: Dict[str, Any]) -> bool:
         """
         Update an existing character profile.
         
         Args:
-            character_id: The character's unique ID
+            id: The character's unique ID
             profile: Updated character profile
             
         Returns:
@@ -82,18 +78,20 @@ class CharacterDatabase:
             cursor.execute("""
                 UPDATE characters 
                 SET profile_json = ?
-                WHERE character_id = ?
-            """, (json.dumps(profile), character_id))
+                WHERE id = ?
+            """, (json.dumps(profile, ensure_ascii=False), id))
             
             conn.commit()
             return cursor.rowcount > 0
     
-    def get_character(self, character_id: str) -> Optional[Dict[str, Any]]:
+
+
+    def get_character(self, id: str) -> Optional[Dict[str, Any]]:
         """
         Retrieve a character profile by ID.
         
         Args:
-            character_id: The character's unique ID
+            id: The character's unique ID
             
         Returns:
             Character profile as dictionary, or None if not found
@@ -101,19 +99,18 @@ class CharacterDatabase:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT name, disambiguation_hint, profile_json
+                SELECT name, profile_json
                 FROM characters
-                WHERE character_id = ?
-            """, (character_id,))
+                WHERE id = ?
+            """, (id,))
             
             row = cursor.fetchone()
             if row:
-                name, disambiguation_hint, profile_json = row
+                name, profile_json = row
                 profile = json.loads(profile_json)
                 return {
-                    'character_id': character_id,
+                    'id': id,
                     'name': name,
-                    'disambiguation_hint': disambiguation_hint,
                     'profile': profile
                 }
             return None
@@ -131,19 +128,18 @@ class CharacterDatabase:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT character_id, name, disambiguation_hint, profile_json
+                SELECT id, name, profile_json
                 FROM characters
                 WHERE name = ?
             """, (name,))
             
             characters = []
             for row in cursor.fetchall():
-                character_id, name, disambiguation_hint, profile_json = row
+                id, name, profile_json = row
                 profile = json.loads(profile_json)
                 characters.append({
-                    'character_id': character_id,
+                    'id': id,
                     'name': name,
-                    'disambiguation_hint': disambiguation_hint,
                     'profile': profile
                 })
             
@@ -159,43 +155,42 @@ class CharacterDatabase:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT character_id, name, disambiguation_hint, profile_json
+                SELECT id, name, profile_json
                 FROM characters
-                ORDER BY name, disambiguation_hint
+                ORDER BY name
             """)
             
             characters = []
             for row in cursor.fetchall():
-                character_id, name, disambiguation_hint, profile_json = row
+                id, name, profile_json = row
                 profile = json.loads(profile_json)
                 characters.append({
-                    'character_id': character_id,
+                    'id': id,
                     'name': name,
-                    'disambiguation_hint': disambiguation_hint,
                     'profile': profile
                 })
             
             return characters
     
-    def delete_character(self, character_id: str) -> bool:
+    def delete_character(self, id: str) -> bool:
         """
         Delete a character profile.
         
         Args:
-            character_id: The character's unique ID
+            id: The character's unique ID
             
         Returns:
             True if deletion was successful, False if character not found
         """
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM characters WHERE character_id = ?", (character_id,))
+            cursor.execute("DELETE FROM characters WHERE id = ?", (id,))
             conn.commit()
             return cursor.rowcount > 0
     
     def search_characters(self, query: str) -> List[Dict[str, Any]]:
         """
-        Search characters by name or disambiguation hint.
+        Search characters by name or hint in profile.
         
         Args:
             query: Search query
@@ -206,20 +201,19 @@ class CharacterDatabase:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT character_id, name, disambiguation_hint, profile_json
+                SELECT id, name, profile_json
                 FROM characters
-                WHERE name LIKE ? OR disambiguation_hint LIKE ?
-                ORDER BY name, disambiguation_hint
+                WHERE name LIKE ? OR JSON_EXTRACT(profile_json, '$.hint') LIKE ?
+                ORDER BY name
             """, (f'%{query}%', f'%{query}%'))
             
             characters = []
             for row in cursor.fetchall():
-                character_id, name, disambiguation_hint, profile_json = row
+                id, name, profile_json = row
                 profile = json.loads(profile_json)
                 characters.append({
-                    'character_id': character_id,
+                    'id': id,
                     'name': name,
-                    'disambiguation_hint': disambiguation_hint,
                     'profile': profile
                 })
             

@@ -1,84 +1,208 @@
-from src.language_models.prompts import first_chunk_prompt, other_chunk_prompt
-from src.language_models.llms import first_chunk_llm, other_chunk_llm
-from src.states import State
+from src.language_models.prompts import name_query_prompt, profile_update_prompt
+from src.language_models.llms import name_query_llm, profile_update_llm
+from src.schemas.states import State
+from src.preprocessors.text_splitters import TextChunker
+from src.databases.database import character_db
+from src.schemas.data_classes import Profile
+import os
 
-def chunker_generator_node(state: State):
+def chunker(state: State):
     """
     Node that takes the file path from the state and yields chunks using a generator for memory efficiency.
     Only the current chunk is kept in the state.
     """
-    from src.preprocessors.text_splitters import TextChunker
-    import os
     file_path = state['file_path']
+    
     if not file_path or not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")
+    
     with open(file_path, 'r', encoding='utf-8') as file:
         text = file.read()
+        
     chunker = TextChunker(chunk_size=1000, chunk_overlap=200)
+    
     chunks = chunker.chunk_text_arabic_optimized(text)
+    
     def chunk_generator():
         for chunk in chunks:
             yield chunk
+            
     gen = chunk_generator()
-    try:
-        first_chunk = next(gen)
-    except StopIteration:
-        first_chunk = ''
+        
     return {
-        'file_path': file_path,
         'chunk_generator': gen,
-        'current_chunk': first_chunk,
-        'last_profile': None
     }
-
-def first_chunk_node(state: State):
+    
+    
+def name_querier(state: State):
     """
-    Node that processes the first chunk from the generator and stores only the current chunk and last profile.
+    Node that queries the name of the character in the current chunk.
     """
-    chain = first_chunk_prompt | first_chunk_llm
-    model_input = {
-        "text": str(state['current_chunk'])
+    context = state['previous_chunk'] + state['current_chunk']
+    
+    chain_input = {
+        "text": str(context)
     }
-    response = chain.invoke(model_input)
+    
+    chain = name_query_prompt | name_query_llm
+    
+    response = chain.invoke(chain_input)
+    
+    # Extract characters from the structured output
+    characters = response.characters if hasattr(response, 'characters') else []
+    
     return {
-        'file_path': state['file_path'],
-        'chunk_generator': state['chunk_generator'],
-        'current_chunk': state['current_chunk'],
-        'last_profile': response
-    }
+        'last_appearing_characters': characters
+    } 
 
-def other_chunk_node(state: State):
+def router_to_name_querier_or_end(state: State):
     """
-    Node that processes the next chunk from the generator and stores only the current chunk and last profile.
+    Node that routes to the name querier or end based on the response from the chunker.
     """
-    gen = state['chunk_generator']
-    try:
-        next_chunk = next(gen)
-    except StopIteration:
-        next_chunk = ''
-    if not next_chunk:
-        return {
-            'file_path': state['file_path'],
-            'chunk_generator': None,
-            'current_chunk': '',
-            'last_profile': state['last_profile']
-        }
-    chain = other_chunk_prompt | other_chunk_llm
-    model_input = {
-        "text": str(next_chunk),
-        "profiles": str(state['last_profile'])
-    }
-    response = chain.invoke(model_input)
-    return {
-        'file_path': state['file_path'],
-        'chunk_generator': gen,
-        'current_chunk': next_chunk,
-        'last_profile': response
-    }
-
-def router_node(state: State):
-    # End if generator is None or current_chunk is empty
-    if state['chunk_generator'] is None or not state['current_chunk']:
+    if state['no_more_chunks']:
         return 'END'
     else:
-        return 'other_chunk'
+        return 'name_querier'
+
+def profile_retriever_creator(state: State):
+    """
+    Node that creates a new profile or retrieves an existing one.
+    Uses last_appearing_characters to retrieve profiles from character_db. If no character exists,
+    creates a new entry with that name and hint, keeping other profile data null.
+    """
+    last_appearing_characters = state['last_appearing_characters']
+    
+    profiles = []
+    
+    for character in last_appearing_characters:
+        name = character.name
+        hint = character.hint
+        
+        existing_characters = character_db.find_characters_by_name(name)
+        
+        if existing_characters:
+            # create the data dictionary that will be send to the LLM
+            for char in existing_characters:
+                profile_data = char['profile']
+                profile = Profile(
+                    name=char['name'],
+                    hint=profile_data['hint'],
+                    age=profile_data['age'],
+                    role=profile_data['role'],
+                    physical_characteristics=profile_data['physical_characteristics'],
+                    personality=profile_data['personality'],
+                    events=profile_data['events'],
+                    relationships=profile_data['relationships'],
+                    aliases=profile_data['aliases'],
+                    id=char['id']
+                )
+                profiles.append(profile)
+        else:
+            # create the json object that will be stored in the database (no need for id because it has its own column)
+            new_profile = {
+                'name': name,
+                'hint': hint,
+                'age': '',
+                'role': '',
+                'physical_characteristics': [],
+                'personality': '',
+                'events': [],
+                'relationships': [],
+                'aliases': [],
+            }
+            
+            character_db.insert_character(name, new_profile)
+            
+            # Create data dictionary that will be send to the LLM
+            profile = Profile(
+                name=name,
+                hint=hint,
+                age='',
+                role='',
+                physical_characteristics=[],
+                personality='',
+                events=[],
+                relationships=[],
+                aliases=[],
+                id='',
+            )
+            profiles.append(profile)
+    
+    return {'last_profiles': profiles}
+
+
+def profile_refresher(state: State):
+    """
+    Node that refreshes the profiles based on the current chunk.
+    """
+    chain_input = {
+        "text": str(state['current_chunk']),
+        "profiles": str(state['last_profiles'])
+    }
+    chain = profile_update_prompt | profile_update_llm
+    response = chain.invoke(chain_input)
+    
+    # Extract profiles from the structured output
+    updated_profiles = []
+    for profile_data in response.profiles:
+        # create the data dictionary that will be an item in the list of profiles in the state
+            profile = Profile(
+                name=profile_data.name,
+                hint=profile_data.hint,
+                age=profile_data.age,
+                role=profile_data.role,
+                physical_characteristics=profile_data.physical_characteristics,
+                personality=profile_data.personality,
+                events=profile_data.events,
+                relationships=profile_data.relations,
+                aliases=profile_data.aliases,
+                id=profile_data.id
+            )
+            updated_profiles.append(profile)
+            
+            # create the json object that will be updated in the database
+            updated_profile_dict = {
+                'name': profile_data.name,
+                'hint': profile_data.hint,
+                'age': profile_data.age,
+                'role': profile_data.role,
+                'physical_characteristics': profile_data.physical_characteristics,
+                'personality': profile_data.personality,
+                'events': profile_data.events,
+                'relationships': profile_data.relations,
+                'aliases': profile_data.aliases,
+            }
+        
+            character_db.update_character(
+                profile_data.id,
+                updated_profile_dict
+            )
+    
+    return {
+        'last_profiles': updated_profiles,
+    }
+
+def chunk_updater(state: State):
+    """
+    Node that updates the previous and current chunks in the state.
+    """
+    try:
+        current_chunk = next(state['chunk_generator'])
+        return {
+            'previous_chunk': state.get('current_chunk', ''),
+            'current_chunk': current_chunk,
+            'no_more_chunks': False
+        }
+    except StopIteration:
+        return {'no_more_chunks': True}
+
+
+
+def router_to_profile_retriever_creator_or_chunk_updater(state: State):
+    """
+    Node that routes to the profile retrieval creator or chunk updater based on the response from the profile refresher.
+    """
+    if state['last_appearing_characters']:
+        return 'profile_retriever_creator'
+    else:
+        return 'chunk_updater'

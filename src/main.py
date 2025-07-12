@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 from src.graphs.graph_builders import compiled_graph
-from src.states import initial_state
+from src.schemas.states import initial_state
 from src.configs import config
 from src.graphs.graph_visualizers import visualize_graph
 
