@@ -19,7 +19,7 @@ def chunker(state: State):
     with open(file_path, 'r', encoding='utf-8') as file:
         text = file.read()
         
-    chunker = TextChunker(chunk_size=1000, chunk_overlap=200)
+    chunker = TextChunker(chunk_size=5000, chunk_overlap=200)
     
     chunks = chunker.chunk_text_arabic_optimized(text)
     
@@ -48,7 +48,6 @@ def name_querier(state: State):
     
     response = chain.invoke(chain_input)
     
-    # Extract characters from the structured output
     characters = response.characters if hasattr(response, 'characters') else []
     
     return {
