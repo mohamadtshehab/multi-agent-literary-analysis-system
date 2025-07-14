@@ -25,3 +25,7 @@ class ProfileData(BaseModel):
 class ProfileRefresher(BaseModel):
     """Use this schema to format the profile refresher output."""
     profiles: list[ProfileData] = Field(description="قائمة من البروفايلات المحدثة للشخصيات")
+
+class Summary(BaseModel):
+    """Use this schema to format the summary output."""
+    summary: str = Field(description="ملخص النص")

@@ -12,14 +12,16 @@ class State(TypedDict):
     last_appearing_characters: list[LastAppearingCharacter] | None
     database: CharacterDatabase
     no_more_chunks: bool
+    last_summary: str
 
 initial_state = {
-    'file_path': 'resources/texts/نـادي المـوت_djvu.txt',
+    'file_path': 'resources/texts/اللص والكلاب.txt',
     'chunk_generator': None,
     'current_chunk': '',
     'previous_chunk': '',
     'last_profiles': None,
     'last_appearing_characters': None,
     'database': CharacterDatabase(),
-    'no_more_chunks': False
+    'no_more_chunks': False,
+    'last_summary': ''
 }

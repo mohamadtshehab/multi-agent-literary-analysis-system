@@ -1,5 +1,5 @@
-from src.language_models.prompts import name_query_prompt, profile_update_prompt
-from src.language_models.llms import name_query_llm, profile_update_llm
+from src.language_models.prompts import name_query_prompt, profile_update_prompt, summary_prompt
+from src.language_models.llms import name_query_llm, profile_update_llm, summary_llm
 from src.schemas.states import State
 from src.preprocessors.text_splitters import TextChunker
 from src.databases.database import character_db
@@ -34,11 +34,33 @@ def chunker(state: State):
     }
     
     
-def name_querier(state: State):
+def first_name_querier(state: State):
     """
     Node that queries the name of the character in the current chunk.
     """
-    context = state['previous_chunk'] + state['current_chunk']
+    third_of_length_of_previous_chunk = len(state['previous_chunk'])//3
+    
+    context = str(state['previous_chunk'][2 * third_of_length_of_previous_chunk:]) + " " + str(state['current_chunk'])
+    
+    chain_input = {
+        "text": str(context)
+    }
+    
+    chain = name_query_prompt | name_query_llm
+    
+    response = chain.invoke(chain_input)
+    
+    characters = response.characters if hasattr(response, 'characters') else []
+    
+    return {
+        'last_appearing_characters': characters
+    } 
+    
+def second_name_querier(state: State):
+    """
+    Node that queries the name of the character in the last summary.
+    """
+    context = state['last_summary']
     
     chain_input = {
         "text": str(context)
@@ -54,14 +76,6 @@ def name_querier(state: State):
         'last_appearing_characters': characters
     } 
 
-def router_to_name_querier_or_end(state: State):
-    """
-    Node that routes to the name querier or end based on the response from the chunker.
-    """
-    if state['no_more_chunks']:
-        return 'END'
-    else:
-        return 'name_querier'
 
 def profile_retriever_creator(state: State):
     """
@@ -135,7 +149,7 @@ def profile_refresher(state: State):
     Node that refreshes the profiles based on the current chunk.
     """
     chain_input = {
-        "text": str(state['current_chunk']),
+        "text": str(state['last_summary']),
         "profiles": str(state['last_profiles'])
     }
     chain = profile_update_prompt | profile_update_llm
@@ -195,13 +209,19 @@ def chunk_updater(state: State):
     except StopIteration:
         return {'no_more_chunks': True}
 
+    
 
-
-def router_to_profile_retriever_creator_or_chunk_updater(state: State):
+def summarizer(state: State):
     """
-    Node that routes to the profile retrieval creator or chunk updater based on the response from the profile refresher.
+    Node that summarizes the text based on the profiles.
     """
-    if state['last_appearing_characters']:
-        return 'profile_retriever_creator'
-    else:
-        return 'chunk_updater'
+    third_of_length_of_last_summary = len(state['last_summary'])//3
+    context = str(state['last_summary'][2 * third_of_length_of_last_summary:]) + " " + str(state['current_chunk'])
+    chain_input = {
+        "text": context,
+        "names": str(state['last_appearing_characters'])
+    }
+    chain = summary_prompt | summary_llm
+    response = chain.invoke(chain_input)
+    
+    return {'last_summary': response.summary}
