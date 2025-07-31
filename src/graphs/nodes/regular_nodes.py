@@ -2,14 +2,15 @@ from src.language_models.prompts import name_query_prompt, profile_update_prompt
 from src.language_models.llms import name_query_llm, profile_update_llm, summary_llm
 from src.schemas.states import State
 from src.preprocessors.text_splitters import TextChunker
+from src.preprocessors.text_cleaners import clean_arabic_text_comprehensive
 from src.databases.database import character_db
 from src.schemas.data_classes import Profile
 import os
 
-def chunker(state: State):
+def cleaner(state: State):
     """
-    Node that takes the file path from the state and yields chunks using a generator for memory efficiency.
-    Only the current chunk is kept in the state.
+    Node that cleans the text from the file before chunking.
+    Uses the clean_text function to normalize and clean the input text.
     """
     file_path = state['file_path']
     
@@ -17,11 +18,29 @@ def chunker(state: State):
         raise FileNotFoundError(f"File not found: {file_path}")
     
     with open(file_path, 'r', encoding='utf-8') as file:
-        text = file.read()
+        raw_text = file.read()
+
+    # Clean the text using the clean_text function
+    cleaned_text = clean_arabic_text_comprehensive(raw_text)
+    
+    return {
+        'cleaned_text': cleaned_text
+    }
+
+
+def chunker(state: State):
+    """
+    Node that takes the cleaned text from the state and yields chunks using a generator for memory efficiency.
+    Only the current chunk is kept in the state.
+    """
+    cleaned_text = state['cleaned_text']
+    
+    if not cleaned_text:
+        raise ValueError("No cleaned text available in state")
         
     chunker = TextChunker(chunk_size=5000, chunk_overlap=200)
     
-    chunks = chunker.chunk_text_arabic_optimized(text)
+    chunks = chunker.chunk_text_arabic_optimized(cleaned_text)
     
     def chunk_generator():
         for chunk in chunks:

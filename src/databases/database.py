@@ -130,8 +130,8 @@ class CharacterDatabase:
             cursor.execute("""
                 SELECT id, name, profile_json
                 FROM characters
-                WHERE name = ?
-            """, (name,))
+                WHERE name LIKE ?
+            """, (f'%{name}%',))
             
             characters = []
             for row in cursor.fetchall():

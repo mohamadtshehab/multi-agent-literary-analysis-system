@@ -1,26 +1,115 @@
 import re
+import os
 
-def clean_text(text):
-    # 1. Remove URLs
-    text = re.sub(r'http\S+|www\S+|https\S+', '', text, flags=re.MULTILINE)
-    # 2. Remove extra newlines and replace with single space, then strip leading/trailing spaces
-    text = re.sub(r'\s+', ' ', text).strip()
-    # 3. Convert to lowercase (optional, depending on the LLM and task)
-    # text = text.lower()
-    # 4. Remove Arabic diacritics (harakat) - common in Arabic text preprocessing
-    text = re.sub(r'[\u064B-\u0652]', '', text)
-    # 5. Remove non-Arabic and non-space characters (keep only Arabic letters, numbers and spaces)
-    # This regex keeps Arabic letters, digits, and basic punctuation. Adjust as needed.
-    # For a stricter approach, only keep Arabic letters and spaces:
-    text = re.sub(r'[^\u0600-\u06FF\s]', '', text) # Keeps only Arabic letters and spaces
-
-    # 6. Normalize some Arabic characters (optional, but good for consistency)
-    text = re.sub(r'[\u0622\u0623\u0625]', '\u0627', text) # Normalize Alif forms to bare Alif
-    text = re.sub(r'\u0649', '\u064A', text) # Normalize Alif Maqsura to Ya
-
+def normalize_arabic_characters(text):
+    """
+    Comprehensive Arabic character normalization.
+    """
+    # Normalize different forms of letters
+    replacements = {
+        # Alif variations
+        '\u0622': '\u0627',  # Alif with madda
+        '\u0623': '\u0627',  # Alif with hamza above
+        '\u0625': '\u0627',  # Alif with hamza below
+        
+        # Remove Arabic diacritics (harakat)
+        '\u064B': '',  # Fatha
+        '\u064C': '',  # Kasra
+        '\u064D': '',  # Damma
+        '\u064E': '',  # Fathatan
+        '\u064F': '',  # Kasratan
+        '\u0650': '',  # Damma on top
+        '\u0651': '',  # Kasra on top
+        '\u0652': '',  # Fathatan on top
+        '\u0629': '\u0647',  # Ta Marbuta to Ha (optional)
+    }
+    
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    
     return text
 
-with open('resources/texts/أرض زيكولا.txt', 'r', encoding='utf-8') as file:
-    file_content = file.read()
+def normalize_arabic_numbers(text):
+    """
+    Normalize Arabic numerals to English numerals or vice versa.
+    """
+    # Arabic to English numerals
+    arabic_to_english = {
+        '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
+        '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9'
+    }
+    
+    # English to Arabic numerals (alternative)
+    english_to_arabic = {
+        '0': '٠', '1': '١', '2': '٢', '3': '٣', '4': '٤',
+        '5': '٥', '6': '٦', '7': '٧', '8': '٨', '9': '٩'
+    }
 
-cleaned_text = clean_text(file_content)
+    for arabic, english in arabic_to_english.items():
+        text = text.replace(arabic, english)
+    
+    return text
+
+def normalize_arabic_punctuation(text):
+    """
+    Normalize Arabic punctuation marks.
+    """
+    # Arabic punctuation to English equivalents
+    punctuation_map = {
+        '،': ',',      # Arabic comma
+        '؛': ';',      # Arabic semicolon
+        '؟': '?',      # Arabic question mark
+        '！': '!',      # Arabic exclamation mark
+        'ـ': '-',      # Arabic tatweel (elongation)
+        '…': '...',    # Arabic ellipsis
+        '«': '"',      # Arabic left double quotation mark
+        '»': '"',      # Arabic right double quotation mark
+        '‹': "'",      # Arabic left single quotation mark
+        '›': "'",      # Arabic right single quotation mark
+    }
+    
+    for arabic, english in punctuation_map.items():
+        text = text.replace(arabic, english)
+    
+    return text
+
+
+def normalize_arabic_spacing(text):
+    """
+    Normalize spacing around Arabic text elements.
+    """
+    # Remove extra spaces around punctuation
+    text = re.sub(r'\s+([،؛؟!])', r'\1', text)
+    text = re.sub(r'([،؛؟!])\s+', r'\1 ', text)
+    
+    # Normalize spacing around numbers
+    text = re.sub(r'(\d+)\s+(\d+)', r'\1\2', text)
+    
+    # Remove spaces before punctuation marks
+    text = re.sub(r'\s+([،؛؟!])', r'\1', text)
+    
+    return text
+
+def clean_arabic_text_comprehensive(text):
+    """
+    Comprehensive Arabic text cleaning with all normalizations.
+    """
+    # Apply all normalizations in order
+    text = re.sub(r'\s+', ' ', text).strip()  # Basic cleaning
+    text = normalize_arabic_characters(text)  # Character normalization
+    text = normalize_arabic_numbers(text)  # Number normalization
+    text = normalize_arabic_punctuation(text)  # Punctuation normalization
+    text = normalize_arabic_spacing(text)  # Spacing normalization
+    
+    return text
+
+
+
+test_text = "resources/texts/01- رواية أرض الإله - احمد مراد_djvu.txt"
+with open(test_text, 'r', encoding='utf-8') as file:
+    text = file.read()
+    save_to_path = "resources/texts/cleaned/أرض الإله_cleaned.txt"
+    #create the directory if it doesn't exist
+    os.makedirs(os.path.dirname(save_to_path), exist_ok=True)
+    with open(save_to_path, 'w', encoding='utf-8') as file:
+        file.write(clean_arabic_text_comprehensive(text))

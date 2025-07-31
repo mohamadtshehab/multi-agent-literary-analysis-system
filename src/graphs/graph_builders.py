@@ -5,6 +5,7 @@ from src.graphs.nodes.router_nodes import *
 
 graph = StateGraph(State)
 
+graph.add_node('cleaner', cleaner)
 graph.add_node('chunker', chunker)
 graph.add_node('first_name_querier', first_name_querier)
 graph.add_node('second_name_querier', second_name_querier)
@@ -14,7 +15,8 @@ graph.add_node('chunk_updater', chunk_updater)
 graph.add_node('summarizer', summarizer)
 
 
-graph.set_entry_point('chunker')
+graph.set_entry_point('cleaner')
+graph.add_edge('cleaner', 'chunker')
 graph.add_edge('chunker', 'chunk_updater')
 
 graph.add_conditional_edges('chunk_updater', router_to_first_name_querier_or_end, {
