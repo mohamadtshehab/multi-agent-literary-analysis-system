@@ -1,5 +1,15 @@
 from src.schemas.states import State
 
+def router_from_Arbic_checker (state : State):
+    """
+     Node that routes to the Arbic_checker or end based on the response from the checker.
+    """
+    if state["is_arabic"] :
+        return "cleaner"
+    else :
+        return "END"
+    
+    
 def router_to_first_name_querier_or_end(state: State):
     """
     Node that routes to the name querier or end based on the response from the chunker.

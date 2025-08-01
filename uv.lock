@@ -392,7 +392,9 @@ dependencies = [
     { name = "ipython" },
     { name = "langchain" },
     { name = "langchain-google-genai" },
+    { name = "langdetect" },
     { name = "langgraph" },
+    { name = "langid" },
     { name = "matplotlib" },
     { name = "transformers" },
 ]
@@ -404,7 +406,9 @@ requires-dist = [
     { name = "ipython", specifier = ">=9.4.0" },
     { name = "langchain", specifier = ">=0.3.26" },
     { name = "langchain-google-genai", specifier = ">=2.1.6" },
+    { name = "langdetect", specifier = ">=1.0.9" },
     { name = "langgraph", specifier = ">=0.5.1" },
+    { name = "langid", specifier = ">=1.1.6" },
     { name = "matplotlib", specifier = ">=3.10.3" },
     { name = "transformers", specifier = ">=4.53.1" },
 ]
@@ -780,6 +784,15 @@ wheels = [
 ]
 
 [[package]]
+name = "langdetect"
+version = "1.0.9"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0e/72/a3add0e4eec4eb9e2569554f7c70f4a3c27712f40e3284d483e88094cc0e/langdetect-1.0.9.tar.gz", hash = "sha256:cbc1fef89f8d062739774bd51eda3da3274006b3661d199c2655f6b3f6d605a0", size = 981474, upload-time = "2021-05-07T07:54:13.562Z" }
+
+[[package]]
 name = "langgraph"
 version = "0.5.1"
 source = { registry = "https://pypi.org/simple" }
@@ -834,6 +847,15 @@ sdist = { url = "https://files.pythonhosted.org/packages/c0/a6/cf13ace9bc7f0e8b1
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4b/4b/d56b51da08d168c2315cd092faa47bc83388b116756dbd6995026ec9ba3f/langgraph_sdk-0.1.72-py3-none-any.whl", hash = "sha256:925d3fcc7a26361db04f9c4beb3ec05bc36361b2a836d181ff2ab145071ec3ce", size = 50129, upload-time = "2025-06-27T01:12:02.449Z" },
 ]
+
+[[package]]
+name = "langid"
+version = "1.1.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ea/4c/0fb7d900d3b0b9c8703be316fbddffecdab23c64e1b46c7a83561d78bd43/langid-1.1.6.tar.gz", hash = "sha256:044bcae1912dab85c33d8e98f2811b8f4ff1213e5e9a9e9510137b84da2cb293", size = 1925978, upload-time = "2016-04-05T22:34:15.786Z" }
 
 [[package]]
 name = "langsmith"
