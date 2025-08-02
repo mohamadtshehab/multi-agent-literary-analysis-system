@@ -1,12 +1,31 @@
 from src.language_models.prompts import name_query_prompt, profile_update_prompt, summary_prompt
 from src.language_models.llms import name_query_llm, profile_update_llm, summary_llm
+from src.preprocessors.text_checkers import ArabicLanguageDetector
 from src.schemas.states import State
 from src.preprocessors.text_splitters import TextChunker
 from src.preprocessors.text_cleaners import clean_arabic_text_comprehensive
 from src.databases.database import character_db
 from src.schemas.data_classes import Profile
 import os
-
+def checker(state : State):
+    """
+    Node that Checks the text from the file before cleaning.
+    Uses the check_text function to make sure the input text is in Arabic.
+    """
+    file_path = state['file_path']
+    if not file_path or not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {file_path}")
+    
+    with open(file_path, 'r', encoding='utf-8') as file:
+        raw_text = file.read()
+    detector = ArabicLanguageDetector()
+    
+    result = detector.check_text(raw_text, debug=True)
+    return {
+        'is_arabic': result
+    }
+    
+    
 def cleaner(state: State):
     """
     Node that cleans the text from the file before chunking.

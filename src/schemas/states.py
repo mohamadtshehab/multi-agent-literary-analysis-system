@@ -13,6 +13,7 @@ class State(TypedDict):
     last_appearing_characters: list[LastAppearingCharacter] | None
     database: CharacterDatabase
     no_more_chunks: bool
+    is_arabic : bool
     last_summary: str
 
 initial_state = {
