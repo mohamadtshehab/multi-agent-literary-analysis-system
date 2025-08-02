@@ -178,37 +178,37 @@ def profile_refresher(state: State):
     updated_profiles = []
     for profile_data in response.profiles:
         # create the data dictionary that will be an item in the list of profiles in the state
-            profile = Profile(
-                name=profile_data.name,
-                hint=profile_data.hint,
-                age=profile_data.age,
-                role=profile_data.role,
-                physical_characteristics=profile_data.physical_characteristics,
-                personality=profile_data.personality,
-                events=profile_data.events,
-                relationships=profile_data.relations,
-                aliases=profile_data.aliases,
-                id=profile_data.id
-            )
-            updated_profiles.append(profile)
-            
-            # create the json object that will be updated in the database
-            updated_profile_dict = {
-                'name': profile_data.name,
-                'hint': profile_data.hint,
-                'age': profile_data.age,
-                'role': profile_data.role,
-                'physical_characteristics': profile_data.physical_characteristics,
-                'personality': profile_data.personality,
-                'events': profile_data.events,
-                'relationships': profile_data.relations,
-                'aliases': profile_data.aliases,
-            }
+        profile = Profile(
+            name=profile_data.name,
+            hint=profile_data.hint,
+            age=profile_data.age,
+            role=profile_data.role,  # Use the role determined by the LLM with tool
+            physical_characteristics=profile_data.physical_characteristics,
+            personality=profile_data.personality,
+            events=profile_data.events,
+            relationships=profile_data.relations,
+            aliases=profile_data.aliases,
+            id=profile_data.id
+        )
+        updated_profiles.append(profile)
         
-            character_db.update_character(
-                profile_data.id,
-                updated_profile_dict
-            )
+        # create the json object that will be updated in the database
+        updated_profile_dict = {
+            'name': profile_data.name,
+            'hint': profile_data.hint,
+            'age': profile_data.age,
+            'role': profile_data.role,  # Use the role determined by the LLM with tool
+            'physical_characteristics': profile_data.physical_characteristics,
+            'personality': profile_data.personality,
+            'events': profile_data.events,
+            'relationships': profile_data.relations,
+            'aliases': profile_data.aliases,
+        }
+    
+        character_db.update_character(
+            profile_data.id,
+            updated_profile_dict
+        )
     
     return {
         'last_profiles': updated_profiles,

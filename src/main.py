@@ -4,6 +4,7 @@ from src.schemas.states import initial_state
 from src.configs import config
 from src.graphs.graph_visualizers import visualize_graph
 from src.databases.database import character_db
+
 load_dotenv()
 
 if __name__ == "__main__":
