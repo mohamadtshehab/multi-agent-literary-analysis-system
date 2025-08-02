@@ -4,6 +4,7 @@ from src.preprocessors.text_checkers import ArabicLanguageDetector
 from src.schemas.states import State
 from src.preprocessors.text_splitters import TextChunker
 from src.preprocessors.text_cleaners import clean_arabic_text_comprehensive
+from src.preprocessors.metadata_remover import remove_book_metadata
 from src.databases.database import character_db
 from src.schemas.data_classes import Profile
 import os
@@ -48,19 +49,37 @@ def cleaner(state: State):
     }
 
 
-def chunker(state: State):
+def metadata_remover(state: State):
     """
-    Node that takes the cleaned text from the state and yields chunks using a generator for memory efficiency.
-    Only the current chunk is kept in the state.
+    Node that removes book metadata from the beginning of the cleaned text.
+    Uses the remove_book_metadata function to identify and remove initial metadata sections.
     """
     cleaned_text = state['cleaned_text']
     
     if not cleaned_text:
         raise ValueError("No cleaned text available in state")
+    
+    # Remove metadata from the cleaned text
+    content_text = remove_book_metadata(cleaned_text)
+    
+    return {
+        'content_text': content_text
+    }
+
+
+def chunker(state: State):
+    """
+    Node that takes the content text from the state and yields chunks using a generator for memory efficiency.
+    Only the current chunk is kept in the state.
+    """
+    content_text = state['content_text']
+    
+    if not content_text:
+        raise ValueError("No content text available in state")
         
     chunker = TextChunker(chunk_size=5000, chunk_overlap=200)
     
-    chunks = chunker.chunk_text_arabic_optimized(cleaned_text)
+    chunks = chunker.chunk_text_arabic_optimized(content_text)
     
     def chunk_generator():
         for chunk in chunks:

@@ -6,6 +6,7 @@ from src.schemas.data_classes import Profile, LastAppearingCharacter
 class State(TypedDict):
     file_path: str
     cleaned_text: str
+    context_text: str
     chunk_generator: object
     current_chunk: str
     previous_chunk: str
@@ -19,6 +20,7 @@ class State(TypedDict):
 initial_state = {
     'file_path': 'resources/texts/english-test.txt',
     'cleaned_text': '',
+    'context_text': '',
     'chunk_generator': None,
     'current_chunk': '',
     'previous_chunk': '',

@@ -13,9 +13,11 @@ graph.add_node('profile_retriever_creator', profile_retriever_creator)
 graph.add_node('profile_refresher', profile_refresher)
 graph.add_node('chunk_updater', chunk_updater)
 graph.add_node('summarizer', summarizer)
+graph.add_node('metadata_remover', metadata_remover)
 
 graph.set_entry_point('language_checker')
-graph.add_edge('cleaner', 'chunker')
+graph.add_edge('cleaner', 'metadata_remover')
+graph.add_edge('metadata_remover', 'chunker')
 graph.add_edge('chunker', 'chunk_updater')
 
 graph.add_conditional_edges('language_checker', router_from_language_checker_to_cleaner_or_end, {
