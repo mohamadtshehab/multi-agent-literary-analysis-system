@@ -7,7 +7,8 @@ from src.preprocessors.text_cleaners import clean_arabic_text_comprehensive
 from src.databases.database import character_db
 from src.schemas.data_classes import Profile
 import os
-def checker(state : State):
+
+def language_checker(state : State):
     """
     Node that Checks the text from the file before cleaning.
     Uses the check_text function to make sure the input text is in Arabic.
@@ -20,7 +21,7 @@ def checker(state : State):
         raw_text = file.read()
     detector = ArabicLanguageDetector()
     
-    result = detector.check_text(raw_text, debug=True)
+    result = detector.check_text(raw_text)
     return {
         'is_arabic': result
     }

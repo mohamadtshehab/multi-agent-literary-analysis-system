@@ -17,7 +17,7 @@ class State(TypedDict):
     last_summary: str
 
 initial_state = {
-    'file_path': 'resources/texts/اللص والكلاب.txt',
+    'file_path': 'resources/texts/english-test.txt',
     'cleaned_text': '',
     'chunk_generator': None,
     'current_chunk': '',
